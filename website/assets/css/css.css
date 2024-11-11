@@ -9,7 +9,7 @@
     --chat-border-color: #e5e5e5;
     --text-app-color: rgb(24, 23, 23);
     --shadow-color: rgba(0, 0, 0, .1);
-    --shadow-chat-window: 0 2px 3px 0px rgb(0 0 0 / 21%);
+    --shadow-chat-window: 0 2px 3px 0 rgb(0 0 0 / 21%)
 }
 
 .div-chat-container {
@@ -29,19 +29,19 @@
     color: var(--chat-tertiary-color);
     cursor: pointer;
     box-shadow: 0 2px 10px var(--shadow-color);
-    transition: transform .2s;
-    transform-origin: 50% 50%;
+    transition: transform 0.2s;
+    transform-origin: 50% 50%
 }
 
 .chat-trigger:active {
     transform: scale(0.98);
-    box-shadow: 0 1px 5px var(--shadow-color);
+    box-shadow: 0 1px 5px var(--shadow-color)
 }
 
 .chat-window {
     position: absolute;
     bottom: 70px;
-    right: 0px;
+    right: 0;
     min-width: 300px;
     min-height: 280px;
     background: var(--chat-primary-background-color);
@@ -49,7 +49,7 @@
     box-shadow: var(--shadow-chat-window);
     display: flex;
     flex-direction: column;
-    max-width: 800px;
+    max-width: 800px
 }
 
 .chat-header {
@@ -62,7 +62,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px;
+    padding: 0 16px
 }
 
 .chat-header h1 {
@@ -71,28 +71,30 @@
     color: #333;
     cursor: pointer;
     margin: 0;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
 }
 
 .chat-header h1>svg {
-    fill: var(--chat-brand-button-color);
+    fill: var(--chat-brand-button-color)
 }
-
 
 .info-header {
     background: var(--chat-info-color);
     text-align: center;
     padding: 3px;
-    font-size: 12px;
+    font-size: 12px
 }
 
 .timer-session {
     text-align: center;
     opacity: 0;
-    transition: opacity 0.5s ease-in-out;
+    transition: opacity 0.5s ease-in-out
 }
 
 .timer-session.active {
-    opacity: 1;
+    opacity: 1
 }
 
 .timer-session>div {
@@ -101,7 +103,7 @@
     padding: 4px 8px;
     color: white;
     font-size: 12px;
-
+    cursor: pointer;
 }
 
 .messages-container {
@@ -139,9 +141,8 @@
 .message.user .message-content {
     background: var(--chat-brand-button-color);
     color: var(--chat-tertiary-color);
-    ;
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column-reverse
 }
 
 .message-content em {
@@ -163,22 +164,20 @@
     text-decoration: line-through
 }
 
+.message-content audio,
 .message-content img,
-.message-content video,
-.message-content audio {
+.message-content video {
     max-width: 300px;
     max-height: 400px;
     object-fit: cover;
-    border-radius: 8px;
-    /* margin: 4px 0 */
+    border-radius: 8px
 }
 
-.message-timestamp,
-.message-id {
+.message-id,
+.message-timestamp {
     font-size: 10px;
     color: #999;
-    inline-size: max-content;
-
+    inline-size: max-content
 }
 
 .message.user .message-timestamp {
@@ -192,9 +191,8 @@
     width: fit-content;
     font-size: 10px;
     color: aliceblue;
-    padding: 6px 15px;
+    padding: 6px 15px
 }
-
 
 .wrap-options {
     position: absolute;
@@ -203,7 +201,7 @@
     gap: 4px;
     flex-direction: row-reverse;
     bottom: -18px;
-    right: 10px;
+    right: 10px
 }
 
 .input-area {
@@ -248,15 +246,15 @@
     top: 50%;
     transform: translateY(-50%);
     opacity: 1;
-    transition: opacity .5s, color .5s;
+    transition: opacity 0.5s, color 0.5s;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: center
 }
 
 .close-button:hover {
     background: #fe5f58;
-    border-radius: 50%;
+    border-radius: 50%
 }
 
 .attachment-preview .remove-attachment {
@@ -268,7 +266,6 @@
     border-radius: 50%;
     background: rgba(0, 0, 0, .5);
     color: var(--chat-tertiary-color);
-    ;
     border: none;
     cursor: pointer;
     display: flex;
@@ -299,12 +296,12 @@
     overflow-y: hidden;
     font-family: inherit;
     line-height: 18px;
-    transition: height 0.4s ease-out;
+    transition: height 0.4s ease-out
 }
 
 .message-input.multiline {
     min-height: 36px;
-    resize: none;
+    resize: none
 }
 
 .action-buttons {
@@ -314,25 +311,25 @@
 }
 
 .send-animation {
-    animation: sendAnimation 0.5s ease-in-out;
+    animation: sendAnimation 0.5s ease-in-out
 }
 
 @keyframes sendAnimation {
     0% {
-        transform: scale(1);
+        transform: scale(1)
     }
 
     50% {
-        transform: scale(1.1);
+        transform: scale(1.1)
     }
 
     100% {
-        transform: scale(1);
+        transform: scale(1)
     }
 }
 
-.send-button,
-.attachment-button {
+.attachment-button,
+.send-button {
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -343,7 +340,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all .2s
+    transition: all 0.2s
 }
 
 .attachment-button {
@@ -353,17 +350,17 @@
 }
 
 .attachment-button>svg {
-    fill: var(--text-app-color);
+    fill: var(--text-app-color)
 }
 
 .attachment-button:active {
-    background: var(--chat-border-color);
+    background: var(--chat-border-color)
 }
 
 .command-color {
     background: whitesmoke;
     font-size: 11px;
-    padding: 0px 10px;
+    padding: 0 10px
 }
 
 .command-color>div {
@@ -371,7 +368,7 @@
 
     >span {
         font-family: monospace;
-        color: cornflowerblue;
+        color: cornflowerblue
     }
 }
 
@@ -386,25 +383,24 @@
     opacity: 1;
     background-color: var(--chat-brand-button-color);
     transform: scale(1);
-    transition: all .2s;
+    transition: all 0.2s;
     box-shadow: 0 0 0 1px var(--chat-border-color)
 }
 
 .send-button>svg {
-    fill: var(--chat-border-color);
+    fill: var(--chat-border-color)
 }
 
 .send-button:active {
     background: var(--chat-border-color);
 
     &>svg:active {
-        fill: var(--chat-brand-button-color);
-
+        fill: var(--chat-brand-button-color)
     }
 }
 
 .send-button:disabled {
-    opacity: .5
+    opacity: 0.5
 }
 
 .attachment-menu {
@@ -413,13 +409,13 @@
     left: -140px;
     background: white;
     border-radius: 12px;
-    box-shadow: 0 0.5px 5px 0px var(--chat-border-color);
+    box-shadow: 0 0.5px 5px 0 var(--chat-border-color);
     padding: 8px 0;
     min-width: 180px;
     transform-origin: bottom right;
     transform: scale(0);
     opacity: 0;
-    transition: all .2s;
+    transition: all 0.2s;
     pointer-events: none;
     margin-bottom: 8px
 }
@@ -441,7 +437,7 @@
 }
 
 .menu-item:hover {
-    background: var(--chat-secondary-background-color);
+    background: var(--chat-secondary-background-color)
 }
 
 .menu-item svg {
@@ -457,15 +453,13 @@
     animation: pulse 1s infinite
 }
 
-
-
 @keyframes pulse {
     0% {
         opacity: 1
     }
 
     50% {
-        opacity: .5
+        opacity: 0.5
     }
 
     100% {
@@ -478,11 +472,11 @@
     width: 20px;
     height: 20px;
     position: relative;
-    animation: spin 1s linear infinite;
+    animation: spin 1s linear infinite
 }
 
-.loading-indicator::before,
-.loading-indicator::after {
+.loading-indicator::after,
+.loading-indicator::before {
     content: "";
     position: absolute;
     top: 50%;
@@ -491,29 +485,28 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background-color: var(--chat-border-color);
+    background-color: var(--chat-border-color)
 }
 
 .loading-indicator::before {
     transform: translate(-50%, -50%) translateX(-8px);
-    animation: spin 1s linear infinite;
+    animation: spin 1s linear infinite
 }
 
 .loading-indicator::after {
     transform: translate(-50%, -50%) translateX(8px);
-    animation: spin 1s linear infinite 0.33s;
+    animation: spin 1s linear infinite 0.33s
 }
 
 @keyframes spin {
     0% {
-        transform: translate(-50%, -50%) rotate(0deg);
+        transform: translate(-50%, -50%) rotate(0deg)
     }
 
     100% {
-        transform: translate(-50%, -50%) rotate(360deg);
+        transform: translate(-50%, -50%) rotate(360deg)
     }
 }
-
 
 .error-message {
     color: #ff3b30;
@@ -527,7 +520,7 @@
         width: 100%;
         height: 100%;
         top: 0;
-        border-radius: 0px
+        border-radius: 0
     }
 
     .messages-container {
@@ -546,7 +539,7 @@
     }
 
     .chat-header {
-        border-radius: 0px;
+        border-radius: 0
     }
 
     .chat-header span {
@@ -558,12 +551,11 @@
 
     @media (max-height:570px) {
         .chat-window {
-            top: 0px
+            top: 0
         }
     }
 }
 
-/* Button to take photos */
 .taking-photo-button {
     position: absolute;
     top: 50%;
@@ -576,20 +568,19 @@
     font-size: 16px;
     cursor: pointer;
     border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2)
 }
 
 .taking-photo-button svg {
     width: 20px;
     height: 20px;
-    margin-right: 10px;
+    margin-right: 10px
 }
 
 .taking-photo-button:hover {
-    background-color: #3e8e41;
+    background-color: #3e8e41
 }
 
-/* Stop recording button */
 .stop-recording-button {
     position: absolute;
     top: 50%;
@@ -602,41 +593,39 @@
     font-size: 16px;
     cursor: pointer;
     border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2)
 }
 
 .stop-recording-button svg {
     width: 20px;
     height: 20px;
-    margin-right: 10px;
+    margin-right: 10px
 }
 
 .stop-recording-button:hover {
-    background-color: #e91e63;
+    background-color: #e91e63
 }
 
 .hidden {
-    opacity: 0;
-    /* transition: opacity .5s; */
+    opacity: 0
 }
 
 .hidden:hover {
-    opacity: 1;
+    opacity: 1
 }
-
 
 .camera-preview {
     width: 100%;
     max-width: 640px;
     height: auto;
-    border-radius: 8px;
+    border-radius: 8px
 }
 
 .preview-container {
     position: relative;
     margin: 10px 0;
     width: 100%;
-    max-width: 640px;
+    max-width: 640px
 }
 
 .capture-button {
@@ -647,10 +636,9 @@
     padding: 8px 16px;
     background: #007bff;
     color: var(--chat-tertiary-color);
-    ;
     border: none;
     border-radius: 20px;
-    cursor: pointer;
+    cursor: pointer
 }
 
 .close-preview {
@@ -659,7 +647,6 @@
     right: 5px;
     background: rgba(0, 0, 0, 0.5);
     color: var(--chat-tertiary-color);
-    ;
     border: none;
     border-radius: 50%;
     width: 24px;
@@ -667,7 +654,7 @@
     cursor: pointer;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: center
 }
 
 .recording-container {
@@ -677,7 +664,7 @@
     padding: 8px;
     background: rgba(255, 0, 0, 0.1);
     border-radius: 8px;
-    margin: 10px 0;
+    margin: 10px 0
 }
 
 .recording-indicator {
@@ -685,12 +672,12 @@
     height: 12px;
     background: red;
     border-radius: 50%;
-    animation: pulse 1s infinite;
+    animation: pulse 1s infinite
 }
 
 .recording-timer {
     font-family: monospace;
-    font-size: 14px;
+    font-size: 14px
 }
 
 .stop-recording {
@@ -698,53 +685,51 @@
     border: none;
     cursor: pointer;
     font-size: 18px;
-    padding: 4px;
+    padding: 4px
 }
 
 @keyframes pulse {
     0% {
-        opacity: 1;
+        opacity: 1
     }
 
     50% {
-        opacity: 0.5;
+        opacity: 0.5
     }
 
     100% {
-        opacity: 1;
+        opacity: 1
     }
 }
 
 @keyframes fade-in {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(20px)
     }
 
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0)
     }
 }
 
 .fade-in {
-    animation: .1s fade-in ease;
+    animation: 0.1s fade-in ease
 }
-
 
 .appear {
-    animation: .1s appear ease-in;
+    animation: 0.1s appear ease-in
 }
-
 
 @keyframes appear {
     from {
         opacity: 0;
-        transform: scale(0.9);
+        transform: scale(0.9)
     }
 
     to {
         opacity: 1;
-        transform: scale(1);
+        transform: scale(1)
     }
 }
