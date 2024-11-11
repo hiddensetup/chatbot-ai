@@ -1,19 +1,28 @@
-  // Hardcoded endpoint
-  const endpoint =
+const endpoint =
   "https://shiny-space-lamp-7vv4vqxvg7pw3p779-57381.app.github.dev";
 
 // const endpoint =
 // "";
-
-// Load marked.js and purify.js from CDN
+/*
+  File: userSession.js
+  Description: Handles user session management in localStorage.
+*/
 (async () => {
   await Promise.all([
+    /*
+      File: loadMarked.js
+      Description: Loads marked.js for markdown parsing.
+    */
     new Promise((resolve) => {
       const script = document.createElement("script");
       script.src = "assets/js/marked.js";
       script.onload = resolve;
       document.head.appendChild(script);
     }),
+    /*
+      File: loadPurify.js
+      Description: Loads DOMPurify.js for HTML sanitization.
+    */
     new Promise((resolve) => {
       const script = document.createElement("script");
       script.src = "assets/js/purify.js";
@@ -25,6 +34,66 @@
   const container = document.createElement("div");
   container.className = "button";
   document.body.appendChild(container);
+
+  /*
+    File: userSession.js
+    Description: Handles user session management in localStorage.
+  */
+  function getUserId() {
+    const userSession = JSON.parse(localStorage.getItem("userSession"));
+
+    // Check if user ID exists and is within the 5-minute window
+    if (
+      userSession &&
+      new Date().getTime() - userSession.timestamp < 5 * 60 * 1000
+    ) {
+      return userSession.userId;
+    }
+
+    // Generate a new user ID if expired or does not exist
+    const newUserId = `user_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem(
+      "userSession",
+      JSON.stringify({
+        userId: newUserId,
+        timestamp: new Date().getTime(),
+      })
+    );
+
+    return newUserId;
+  }
+
+  const userId = getUserId();
+
+  /*
+    File: fetchLastConversation.js
+    Description: Fetches the last conversation for the user.
+  */
+  async function fetchLastConversation(userId) {
+    try {
+      const response = await fetch(`${endpoint}/lastConversation/${userId}`);
+      if (!response.ok) {
+        throw new Error("Failed to retrieve last conversation");
+      }
+      const messagesData = await response.json();
+
+      // Convert messagesData to match the format in `this.messages`
+      return messagesData.map((msg) => ({
+        text: msg.content,
+        isUser: msg.user_type === "user",
+        timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        attachment: msg.hasMedia
+          ? { url: msg.fileUri, type: msg.mimeType }
+          : null,
+      }));
+    } catch (error) {
+      console.error("Error fetching last conversation:", error);
+      return [];
+    }
+  }
 
   Vue.createApp({
     template,
@@ -38,59 +107,96 @@
         isRecording: false,
         mediaRecorder: null,
         recordedChunks: [],
-        userId: "user_" + Math.random().toString(36).substr(2, 9),
+        userId: userId,
         isLoading: false,
         maxFileSize: 5 * 1024 * 1024, // 5MB max file size
         showOptionsIndex: null,
         inputFocused: false,
         showImageText: true,
         showAttachmentButton: true, // New boolean property
-
       };
     },
 
+    async created() {
+      // Load the last conversation when the app is created
+      const lastConversation = await fetchLastConversation(this.userId);
+      this.messages = lastConversation || [];
+    },
+
     methods: {
+      /*
+        File: resetSession.js
+        Description: Resets the user session and clears the conversation.
+      */
+      resetSession() {
+        localStorage.removeItem("userSession"); // Clear the session
+        this.messages = []; // Clear the current conversation
+        this.showImageText = true; // Reset the input visibility
+      },
+
+      /*
+        File: formatMessage.js
+        Description: Formats the message for display.
+      */
       formatMessage(text) {
-        // Remove trailing line breaks
-        text = text.replace(/\n+$/, "");
-        // Sanitize the text using purify.js
-        text = DOMPurify.sanitize(text);
-        // Replace <br> with line breaks for proper rendering
-        text = text.replace(/<br>/g, "<br>");
+        text = text.replace(/\n+$/, ""); // Remove trailing line breaks
+        text = DOMPurify.sanitize(text); // Sanitize using purify.js
+        text = text.replace(/<br>/g, "<br>"); // Replace <br> with line breaks
         return marked.parse(text);
       },
 
+      /*
+        File: autoResize.js
+        Description: Auto-resizes the message input field.
+      */
       autoResize() {
         const messageInput = this.$refs.messageInput;
         messageInput.style.height = "auto"; // Reset height to auto to allow shrinking
         messageInput.style.height = messageInput.scrollHeight + "px"; // Set to scrollHeight
       },
 
+      /*
+        File: handleInput.js
+        Description: Handles input events in the message input field.
+      */
       handleInput(e) {
         this.newMessage = e.target.innerText;
-        // Prevent Enter key from adding a new line
-        if (e.inputType === "insertParagraph") {
-          e.preventDefault();
-        }
+        if (e.inputType === "insertParagraph") e.preventDefault(); // Prevent Enter key from adding a new line
       },
 
+      /*
+        File: handleBlur.js
+        Description: Handles blur events in the message input field.
+      */
       handleBlur(e) {
-        // Only blur if we're not clicking inside the chat window
         if (!e.relatedTarget || !this.$el.contains(e.relatedTarget)) {
           setTimeout(() => {
-            if (!this.newMessage.trim()) {
-              this.inputFocused = false;
-            }
+            if (!this.newMessage.trim()) this.inputFocused = false;
           }, 200);
         }
       },
+
+      /*
+        File: toggleMenu.js
+        Description: Toggles the attachment menu.
+      */
       toggleMenu() {
         this.showMenu = !this.showMenu;
       },
+
+      /*
+        File: handleAttachment.js
+        Description: Handles attachment selection.
+      */
       handleAttachment() {
         this.$refs.fileInput.click();
         this.showMenu = false;
       },
+
+      /*
+        File: onFileSelected.js
+        Description: Handles file selection for attachments.
+      */
       onFileSelected(event) {
         const files = Array.from(event.target.files);
         files.forEach((file) => {
@@ -100,7 +206,6 @@
             });
             return;
           }
-
           const reader = new FileReader();
           reader.onload = (e) => {
             this.attachmentPreviews.push({
@@ -111,13 +216,21 @@
           };
           reader.readAsDataURL(file);
         });
-        // Clear the input value to allow for another file to be selected
         event.target.value = "";
       },
+
+      /*
+        File: removeAttachment.js
+        Description: Removes an attachment from the preview list.
+      */
       removeAttachment(index) {
         this.attachmentPreviews.splice(index, 1);
       },
 
+      /*
+        File: handleAudio.js
+        Description: Handles audio recording.
+      */
       async handleAudio() {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
@@ -128,15 +241,11 @@
           this.isRecording = true;
 
           this.mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) {
-              this.recordedChunks.push(e.data);
-            }
+            if (e.data.size > 0) this.recordedChunks.push(e.data);
           };
 
           this.mediaRecorder.onstop = () => {
-            const blob = new Blob(this.recordedChunks, {
-              type: "audio/mp3", // Changed to mp3
-            });
+            const blob = new Blob(this.recordedChunks, { type: "audio/mp3" });
             if (blob.size > this.maxFileSize) {
               this.attachmentPreviews.push({
                 error: "Audio recording exceeds 5MB limit",
@@ -145,11 +254,9 @@
               const url = URL.createObjectURL(blob);
               this.attachmentPreviews.push({
                 url: url,
-                type: "audio/mp3", // Changed to mp3
-                file: new File([blob], "audio.mp3", { type: "audio/mp3" }), // Changed to mp3
+                type: "audio/mp3",
+                file: new File([blob], "audio.mp3", { type: "audio/mp3" }),
               });
-              // // Send the audio file to the backend for transcription
-              // this.transcribeAudio(blob);
             }
             this.isRecording = false;
             stream.getTracks().forEach((track) => track.stop());
@@ -157,12 +264,8 @@
 
           this.mediaRecorder.start();
           this.stopRecordingTimeout = setTimeout(() => {
-            if (
-              this.mediaRecorder &&
-              this.mediaRecorder.state === "recording"
-            ) {
+            if (this.mediaRecorder && this.mediaRecorder.state === "recording")
               this.mediaRecorder.stop();
-            }
           }, 30000);
         } catch (err) {
           console.error("Error accessing microphone:", err);
@@ -170,18 +273,19 @@
         this.showMenu = false;
       },
 
+      /*
+        File: sendMessage.js
+        Description: Sends the user's message to the server.
+      */
       async sendMessage() {
         if (this.isLoading) return;
         this.isLoading = true;
-
-        // Hide the input by setting opacity to 0
-        this.showImageText = false;
+        this.showImageText = false; // Hide input
 
         const userInput = this.$refs.messageInput.innerText.trim();
         const attachments = [...this.attachmentPreviews];
         this.attachmentPreviews = [];
 
-        // Only send if there's an attachment or if the user input is not empty
         if (attachments.length > 0 || userInput) {
           this.messages.push({
             text: userInput || "",
@@ -194,12 +298,11 @@
           });
         } else {
           this.isLoading = false;
-          this.showImageText = true; // Show the input again
+          this.showImageText = true;
           return;
         }
 
         let attachmentCommand = "";
-
         try {
           let payload = { message: userInput, userId: this.userId };
 
@@ -226,7 +329,7 @@
                 }),
               });
               this.isLoading = false;
-              this.showImageText = true; // Show the input again
+              this.showImageText = true;
               return;
             }
           }
@@ -237,12 +340,10 @@
             body: JSON.stringify(payload),
           });
 
-          if (!response.ok) {
+          if (!response.ok)
             throw new Error(
               `Network response was not ok: ${response.statusText}`
             );
-          }
-
           const data = await response.json();
 
           this.messages.push({
@@ -285,13 +386,10 @@
         } finally {
           this.$refs.messageInput.innerText = "";
           this.$refs.messageInput.style.height = "36px";
-
-          if (attachmentCommand) {
+          if (attachmentCommand)
             this.$refs.messageInput.innerText = attachmentCommand;
-          }
-
           this.isLoading = false;
-          this.showImageText = true; // Show the input area again after message send
+          this.showImageText = true;
         }
 
         this.$nextTick(() => {
@@ -300,10 +398,18 @@
         });
       },
 
+      /*
+        File: toggleOptions.js
+        Description: Toggles the options menu for a message.
+      */
       toggleOptions(index) {
         this.showOptionsIndex = this.showOptionsIndex === index ? null : index;
       },
-      // Function to convert image to base64
+
+      /*
+        File: toBase64.js
+        Description: Converts a file to base64 encoding.
+      */
       async toBase64(file) {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -316,13 +422,18 @@
   }).mount(container);
 })();
 
-// Part 1:  Chat UI and Vue App Setup
-const link = document.createElement("link");
-link.rel = "stylesheet";
-link.href = "assets/css/css.css";
-document.head.appendChild(link);
+// CSS STYLE
+const style = document.createElement('style');
+style.innerHTML = `:root{--chat-info-color-blue:#007AFF;--chat-info-color:#7fff9a;--chat-secondary-color:#333;--chat-tertiary-color:#e5e5e5;--chat-primary-background-color:#ffffff;--chat-secondary-background-color:rgb(12 14 19 / 9%);--chat-brand-button-color:#15141f;--chat-border-color:#e5e5e5;--text-app-color:rgb(24, 23, 23);--shadow-color:rgba(0, 0, 0, .1);--shadow-chat-window:0 2px 3px 0 rgb(0 0 0 / 21%)}.div-chat-container{position:fixed;bottom:8px;right:18px;z-index:8000;font-family:-apple-system, BlinkMacSystemFont, sans-serif}.chat-trigger{width:60px;height:60px;border-radius:40px;background:var(--chat-brand-button-color);border:none;color:var(--chat-tertiary-color);cursor:pointer;box-shadow:0 2px 10px var(--shadow-color);transition:transform 0.2s;transform-origin:50% 50%}.chat-trigger:active{transform:scale(0.98);box-shadow:0 1px 5px var(--shadow-color)}.chat-window{position:absolute;bottom:70px;right:0;min-width:300px;min-height:280px;background:var(--chat-primary-background-color);border-radius:15px;box-shadow:var(--shadow-chat-window);display:flex;flex-direction:column;max-width:800px}.chat-header{height:50px;background:var(--chat-secondary-background-color);backdrop-filter: blur(10px);border-radius:12px 12px 0 0;font-weight:500;border-bottom:1px solid var(--chat-border-color);display:flex;align-items:center;justify-content:space-between;padding:0 16px}.chat-header h1{position:relative;font-size:22px;color:#333;cursor:pointer;margin:0}.chat-header h1 > svg{fill:var(--chat-brand-button-color)}.info-header{background:var(--chat-info-color);text-align:center;padding:3px;font-size:12px}.timer-session{text-align:center;opacity:0;transition:opacity 0.5s ease-in-out}.timer-session.active{opacity:1}.timer-session > div{background:var(--chat-info-color-blue);text-align:center;padding:4px 8px;color:white;font-size:12px;cursor:pointer;}.messages-container{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:28px;max-height:360px;scroll-behavior:smooth}.message{max-width:90%;display:flex;position:relative}.message.user{margin-left:auto;flex-direction:row-reverse}.message-content{cursor:pointer;padding:8px 4px;border-radius:16px;background:white;box-shadow:0 1px 3px var(--chat-border-color);color:#1d1d1f;position:relative}.message.user .message-content{background:var(--chat-brand-button-color);color:var(--chat-tertiary-color);display:flex;flex-direction:column-reverse}.message-content em{font-style:italic}.message-content strong{font-weight:bold}.message-content code{font-family:inherit;background:rgba(0, 0, 0, 0.05);padding:2px 4px;border-radius:4px}.message-content del{text-decoration:line-through}.message-content audio,.message-content img,.message-content video{max-width:300px;max-height:400px;object-fit:cover;border-radius:8px}.message-id,.message-timestamp{font-size:10px;color:#999;inline-size:max-content}.message.user .message-timestamp{font-size:10px;color:#999}.command-button{background:black;border-radius:30px;width:fit-content;font-size:10px;color:aliceblue;padding:6px 15px}.wrap-options{position:absolute;display:flex;align-items:center;gap:4px;flex-direction:row-reverse;bottom:-18px;right:10px}.input-area{padding:8px;background:transparent;backdrop-filter: blur(10px);border-top:1px solid var(--chat-border-color);display:flex;flex-direction:column;gap:8px;border-radius:0 0 15px 15px}.attachment-preview-area{display:flex;gap:8px;padding:0 4px}.attachment-preview{position:relative;width:40px;height:40px;border-radius:8px;background:#eee;overflow:hidden}.attachment-preview img,.attachment-preview video{width:100%;height:100%;object-fit:cover}.close-button{line-height:0;background:rgb(0 0 0 / 4%);position:absolute;border-radius:50%;right:15px;top:50%;transform:translateY(-50%);opacity:1;transition:opacity 0.5s, color 0.5s;display:flex;align-items:center;justify-content:center}.close-button:hover{background:#fe5f58;border-radius:50%}.attachment-preview .remove-attachment{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0, 0, 0, .5);color:var(--chat-tertiary-color);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center}.input-row{display:flex;gap:8px;align-items:flex-end}.message-input{flex:1;padding:8px 14px;border:1px solid var(--chat-border-color);border-radius:20px;outline:none;font-size:14px;background:var(--chat-primary-background-color);resize:none;height:36px;min-height:36px;word-wrap:break-word;white-space:pre-wrap;max-height:120px;overflow-y:hidden;font-family:inherit;line-height:18px;transition:height 0.4s ease-out}.message-input.multiline{min-height:36px;resize:none}.action-buttons{display:flex;gap:8px;align-items:flex-end}.send-animation{animation:sendAnimation 0.5s ease-in-out}@keyframes sendAnimation{0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}.attachment-button,.send-button{width:36px;height:36px;border-radius:50%;border:none;background:#007AFF;color:var(--chat-tertiary-color);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s}.attachment-button{background:transparent;position:relative;box-shadow:0 0 0 1px var(--chat-border-color)}.attachment-button > svg{fill:var(--text-app-color)}.attachment-button:active{background:var(--chat-border-color)}.command-color{background:whitesmoke;font-size:11px;padding:0 10px}.command-color > div{color:lightslategray;> span{font-family:monospace;color:cornflowerblue}}.send-button{display:none;transform:scale(0.8);transition:opacity 0.2s, transform 0.2s}.send-button.visible{display:block;opacity:1;background-color:var(--chat-brand-button-color);transform:scale(1);transition:all 0.2s;box-shadow:0 0 0 1px var(--chat-border-color)}.send-button > svg{fill:var(--chat-border-color)}.send-button:active{background:var(--chat-border-color);& > svg:active{fill:var(--chat-brand-button-color)}}.send-button:disabled{opacity:0.5}.attachment-menu{position:absolute;bottom:100%;left:-140px;background:white;border-radius:12px;box-shadow:0 0.5px 5px 0 var(--chat-border-color);padding:8px 0;min-width:180px;transform-origin:bottom right;transform:scale(0);opacity:0;transition:all 0.2s;pointer-events:none;margin-bottom:8px}.attachment-menu.active{transform:scale(1);opacity:1;pointer-events:auto}.menu-item{padding:10px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;color:#333;font-size:14px}.menu-item:hover{background:var(--chat-secondary-background-color)}.menu-item svg{width:20px;height:20px}.recording-indicator{width:10px;height:10px;border-radius:50%;background:#ff0000;animation:pulse 1s infinite}@keyframes pulse{0%{opacity:1}50%{opacity:0.5}100%{opacity:1}}.loading-indicator{display:inline-block;width:20px;height:20px;position:relative;animation:spin 1s linear infinite}.loading-indicator::after,.loading-indicator::before{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);width:6px;height:6px;border-radius:50%;background-color:var(--chat-border-color)}.loading-indicator::before{transform:translate(-50%, -50%) translateX(-8px);animation:spin 1s linear infinite}.loading-indicator::after{transform:translate(-50%, -50%) translateX(8px);animation:spin 1s linear infinite 0.33s}@keyframes spin{0%{transform:translate(-50%, -50%) rotate(0deg)}100%{transform:translate(-50%, -50%) rotate(360deg)}}.error-message{color:#ff3b30;font-size:12px;margin-top:4px}@media (max-width:900px){.chat-window{position:fixed;width:100%;height:100%;top:0;border-radius:0}.messages-container{max-height:100%}.div-chat-container{bottom:5px;right:10px}.chat-trigger{width:60px;height:60px;border-radius:50px}.chat-header{border-radius:0}.chat-header span{position:absolute;top:10px;left:14px;font-size:24px}@media (max-height:570px){.chat-window{top:0}}}.taking-photo-button{position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);background-color:#4CAF50;color:#fff;border:none;padding:10px 20px;font-size:16px;cursor:pointer;border-radius:5px;box-shadow:0 0 10px rgba(0, 0, 0, 0.2)}.taking-photo-button svg{width:20px;height:20px;margin-right:10px}.taking-photo-button:hover{background-color:#3e8e41}.stop-recording-button{position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);background-color:#f44336;color:#fff;border:none;padding:10px 20px;font-size:16px;cursor:pointer;border-radius:5px;box-shadow:0 0 10px rgba(0, 0, 0, 0.2)}.stop-recording-button svg{width:20px;height:20px;margin-right:10px}.stop-recording-button:hover{background-color:#e91e63}.hidden{opacity:0}.hidden:hover{opacity:1}.camera-preview{width:100%;max-width:640px;height:auto;border-radius:8px}.preview-container{position:relative;margin:10px 0;width:100%;max-width:640px}.capture-button{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);padding:8px 16px;background:#007bff;color:var(--chat-tertiary-color);border:none;border-radius:20px;cursor:pointer}.close-preview{position:absolute;top:5px;right:5px;background:rgba(0, 0, 0, 0.5);color:var(--chat-tertiary-color);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center}.recording-container{display:flex;align-items:center;gap:10px;padding:8px;background:rgba(255, 0, 0, 0.1);border-radius:8px;margin:10px 0}.recording-indicator{width:12px;height:12px;background:red;border-radius:50%;animation:pulse 1s infinite}.recording-timer{font-family:monospace;font-size:14px}.stop-recording{background:none;border:none;cursor:pointer;font-size:18px;padding:4px}@keyframes pulse{0%{opacity:1}50%{opacity:0.5}100%{opacity:1}}@keyframes fade-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.fade-in{animation:0.1s fade-in ease}.appear{animation:0.1s appear ease-in}@keyframes appear{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}`;
+document.head.appendChild(style);
+
+// const link = document.createElement('link');
+// link.rel = 'stylesheet';
+// link.href = 'assets/css/css.css';
+// document.head.appendChild(link);
+
 const template = `
-     <div class="chat-container">
+     <div class="div-chat-container">
         <button class="chat-trigger" @click="isOpen = !isOpen">
            <svg fill="white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23" xml:space="preserve" width="23" height="23" style="display: block; margin: auto;"><path d="M16.099 0H6.902C3.098 0 0.004 3.095 0.004 6.898v5.365c0 3.804 3.095 6.898 6.898 6.898h0.683c2.67 0 5.181 1.04 7.069 2.928l0.719 0.719a0.653 0.653 0 0 0 1.11 -0.461v-3.198c3.627 -0.2 6.515 -3.213 6.515 -6.888V6.898C22.997 3.095 19.903 0 16.1 0"/></svg>
         </button>
@@ -340,8 +451,16 @@ const template = `
                 </div>
             </div>
 
-            <div v-if="messages.length === 0" class="info-header">Welcome to Super Chat</div>
-            <div class="messages-container" ref="msgs" >
+<div v-if="messages.length === 0" class="info-header">
+  Welcome to Super Chat
+</div>
+
+<div class="timer-session" v-if="messages.length > 0" :class="{ 'active': messages.length > 0 }">
+  <div @click="resetSession"> Want to start a fresh conversation? Click here! </div>
+</div>
+
+
+<div class="messages-container" ref="msgs" >
                 <div v-for="(msg, index) in messages" :class="['message', msg.isUser ? 'user' : 'bot']" @click="toggleOptions(index)">
                     <div class="message-content">
                         <div v-html="formatMessage(msg.text)"></div>
