@@ -1,1 +1,54 @@
-[]
+[
+  {
+    "userId": "user_61w1a9dcl",
+    "conversations": [
+      {
+        "conversationId": "conv_1731329346290",
+        "messages": [
+          {
+            "messageId": 1,
+            "user_type": "user",
+            "content": "hi",
+            "hasMedia": false,
+            "fileUri": null,
+            "mimeType": null,
+            "timestamp": "2024-11-11T12:49:08.270Z",
+            "replyTo": null
+          },
+          {
+            "messageId": 2,
+            "user_type": "assistant",
+            "content": "Hola, soy Rolando, experto en IA. ¿En qué puedo ayudarte hoy?\n",
+            "timestamp": "2024-11-11T12:49:08.270Z"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "userId": "user_rm42tk8qz",
+    "conversations": [
+      {
+        "conversationId": "conv_1731330704856",
+        "messages": [
+          {
+            "messageId": 1,
+            "user_type": "user",
+            "content": "hola",
+            "hasMedia": false,
+            "fileUri": null,
+            "mimeType": null,
+            "timestamp": "2024-11-11T13:11:46.850Z",
+            "replyTo": null
+          },
+          {
+            "messageId": 2,
+            "user_type": "assistant",
+            "content": "Hola, soy Rolando, experto en IA. ¿En qué puedo ayudarte hoy?\n",
+            "timestamp": "2024-11-11T13:11:46.850Z"
+          }
+        ]
+      }
+    ]
+  }
+]

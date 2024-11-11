@@ -20,12 +20,10 @@ const ALLOWED_ORIGINS =
 
 // CORS configuration
 const corsOptions = {
-  origin: (origin, callback) => {
-    if (
-      ALLOWED_ORIGINS.includes(origin) ||
-      ALLOWED_ORIGINS.includes("http://localhost") ||
-      ALLOWED_ORIGINS.includes("http://127.0.0.1")
-    ) {
+  origin: function (origin, callback) {
+    if (ALLOWED_ORIGINS === "*") {
+      callback(null, true);
+    } else if (ALLOWED_ORIGINS.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -41,7 +39,8 @@ app.use(express.json({ limit: "50mb" }));
 // ----------------------------------------------------------------------------
 let googleAiSystemInstruction;
 try {
-  const contextFilePath = process.env.CONTEXT;
+  const contextFilePath = process.env.CONTEXT || path.join(__dirname, "context.json");
+  const defaultContext = { "systemInstruction": "atender amable" };
   if (!contextFilePath) {
     throw new Error("CONTEXT file path is not specified in .env");
   }
@@ -475,6 +474,27 @@ app.get("/listFiles", async (req, res) => {
   } catch (error) {
     console.error("Error listing files:", error);
     res.status(500).json({ error: "Failed to list files" });
+  }
+});
+
+
+// ----------------------------------------------------------------------------
+//  API endpoint to retrieve the last conversation
+// ----------------------------------------------------------------------------
+app.get("/lastConversation/:userId", async (req, res) => {
+  // This API endpoint retrieves the last conversation for a given user.
+  // Example usage: GET /lastConversation/12345
+  const userId = req.params.userId;
+  try {
+    const userChatHistory = chatHistory.find((user) => user.userId === userId);
+    if (!userChatHistory) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    const conversation = userChatHistory.conversations[0];
+    res.json(conversation.messages);
+  } catch (error) {
+    console.error("Error retrieving last conversation:", error);
+    res.status(500).json({ error: "Failed to retrieve last conversation" });
   }
 });
 

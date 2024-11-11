@@ -1273,7 +1273,7 @@
         "<" +
         r +
         (t && 1 !== n ? ' start="' + n + '"' : "") +
-        ">\n" +
+        ' style="padding-left: 15px;">\n' +
         s +
         "</" +
         r +
@@ -1303,7 +1303,7 @@
       );
     }
     paragraph({ tokens: e }) {
-      return `<p style="margin:0px">${this.parser.parseInline(e)}</p>\n`;
+      return `<p style="margin:0px 5px;line-height:normal">${this.parser.parseInline(e)}</p>\n`;
     }
     table(e) {
       let t = "",

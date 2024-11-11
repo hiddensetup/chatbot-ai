@@ -1,17 +1,22 @@
-// Hardcoded endpoint
-const endpoint = "http://localhost:57380";
+  // Hardcoded endpoint
+  const endpoint =
+  "https://shiny-space-lamp-7vv4vqxvg7pw3p779-57381.app.github.dev";
+
+// const endpoint =
+// "";
+
 // Load marked.js and purify.js from CDN
 (async () => {
   await Promise.all([
     new Promise((resolve) => {
       const script = document.createElement("script");
-      script.src = "js/marked.js";
+      script.src = "assets/js/marked.js";
       script.onload = resolve;
       document.head.appendChild(script);
     }),
     new Promise((resolve) => {
       const script = document.createElement("script");
-      script.src = "js/purify.js";
+      script.src = "assets/js/purify.js";
       script.onload = resolve;
       document.head.appendChild(script);
     }),
@@ -28,7 +33,6 @@ const endpoint = "http://localhost:57380";
         isOpen: false,
         messages: [],
         newMessage: "",
-        hasBreakline: false,
         showMenu: false,
         attachmentPreviews: [],
         isRecording: false,
@@ -39,9 +43,12 @@ const endpoint = "http://localhost:57380";
         maxFileSize: 5 * 1024 * 1024, // 5MB max file size
         showOptionsIndex: null,
         inputFocused: false,
-        showImageText: true, // New data property
+        showImageText: true,
+        showAttachmentButton: true, // New boolean property
+
       };
     },
+
     methods: {
       formatMessage(text) {
         // Remove trailing line breaks
@@ -49,18 +56,24 @@ const endpoint = "http://localhost:57380";
         // Sanitize the text using purify.js
         text = DOMPurify.sanitize(text);
         // Replace <br> with line breaks for proper rendering
-        text = text.replace(/<br>/g, '<br>'); // Changed to '<br>'
+        text = text.replace(/<br>/g, "<br>");
         return marked.parse(text);
       },
+
+      autoResize() {
+        const messageInput = this.$refs.messageInput;
+        messageInput.style.height = "auto"; // Reset height to auto to allow shrinking
+        messageInput.style.height = messageInput.scrollHeight + "px"; // Set to scrollHeight
+      },
+
       handleInput(e) {
-        this.hasBreakline = this.newMessage.includes("\n");
-        const textarea = e.target;
-        const lineCount = (this.newMessage.match(/\n/g) || []).length + 1;
-        const newHeight = lineCount * 18;
-        if (newHeight <= 120) {
-          textarea.style.height = `${newHeight}px`;
+        this.newMessage = e.target.innerText;
+        // Prevent Enter key from adding a new line
+        if (e.inputType === "insertParagraph") {
+          e.preventDefault();
         }
       },
+
       handleBlur(e) {
         // Only blur if we're not clicking inside the chat window
         if (!e.relatedTarget || !this.$el.contains(e.relatedTarget)) {
@@ -161,27 +174,31 @@ const endpoint = "http://localhost:57380";
         if (this.isLoading) return;
         this.isLoading = true;
 
-        // Only send audio if there's no text or other attachments
-        if (this.attachmentPreviews.length > 0 && this.attachmentPreviews[0].type !== "audio/mp3") {
-          this.isLoading = false;
-          return;
-        }
+        // Hide the input by setting opacity to 0
+        this.showImageText = false;
 
+        const userInput = this.$refs.messageInput.innerText.trim();
         const attachments = [...this.attachmentPreviews];
         this.attachmentPreviews = [];
 
-        this.messages.push({
-          text: this.newMessage,
-          isUser: true,
-          attachment: attachments[0], // Assuming single attachment for now
-          timestamp: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        });
+        // Only send if there's an attachment or if the user input is not empty
+        if (attachments.length > 0 || userInput) {
+          this.messages.push({
+            text: userInput || "",
+            isUser: true,
+            attachment: attachments[0] || null,
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          });
+        } else {
+          this.isLoading = false;
+          this.showImageText = true; // Show the input again
+          return;
+        }
 
-        const userInput = this.newMessage;
-        this.newMessage = "";
+        let attachmentCommand = "";
 
         try {
           let payload = { message: userInput, userId: this.userId };
@@ -190,13 +207,13 @@ const endpoint = "http://localhost:57380";
             try {
               if (attachments[0].type.startsWith("image")) {
                 payload.image = await this.toBase64(attachments[0].file);
-                this.newMessage += " /image";
+                attachmentCommand = "  /image";
               } else if (attachments[0].type.startsWith("audio")) {
                 payload.audio = await this.toBase64(attachments[0].file);
-                this.newMessage += " /audio";
+                attachmentCommand = "  /audio";
               } else if (attachments[0].type.startsWith("application/pdf")) {
                 payload.pdf = await this.toBase64(attachments[0].file);
-                this.newMessage += " /pdf";
+                attachmentCommand = "  /pdf";
               }
             } catch (error) {
               console.error("Error converting file to base64:", error);
@@ -209,6 +226,7 @@ const endpoint = "http://localhost:57380";
                 }),
               });
               this.isLoading = false;
+              this.showImageText = true; // Show the input again
               return;
             }
           }
@@ -235,7 +253,7 @@ const endpoint = "http://localhost:57380";
               minute: "2-digit",
             }),
           });
-          // Append the sent image to the input area
+
           if (data.image) {
             const img = document.createElement("img");
             img.src = data.image;
@@ -265,7 +283,15 @@ const endpoint = "http://localhost:57380";
             }),
           });
         } finally {
+          this.$refs.messageInput.innerText = "";
+          this.$refs.messageInput.style.height = "36px";
+
+          if (attachmentCommand) {
+            this.$refs.messageInput.innerText = attachmentCommand;
+          }
+
           this.isLoading = false;
+          this.showImageText = true; // Show the input area again after message send
         }
 
         this.$nextTick(() => {
@@ -273,6 +299,7 @@ const endpoint = "http://localhost:57380";
           container.scrollTop = container.scrollHeight;
         });
       },
+
       toggleOptions(index) {
         this.showOptionsIndex = this.showOptionsIndex === index ? null : index;
       },
@@ -285,7 +312,6 @@ const endpoint = "http://localhost:57380";
           reader.onerror = (error) => reject(error);
         });
       },
-      
     },
   }).mount(container);
 })();
@@ -293,7 +319,7 @@ const endpoint = "http://localhost:57380";
 // Part 1:  Chat UI and Vue App Setup
 const link = document.createElement("link");
 link.rel = "stylesheet";
-link.href = "css/css.css";
+link.href = "assets/css/css.css";
 document.head.appendChild(link);
 const template = `
      <div class="chat-container">
@@ -303,6 +329,7 @@ const template = `
         
             <div class="chat-window"  v-show="isOpen" :class="{ 'fade-in': isOpen }">
             <div class="chat-header">
+
                 <h1  @input="updateTitle" @blur="saveTitle">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 1.207 1.206" xml:space="preserve" style="display: block; margin: auto;"><path d="M.604 0a.603.603 0 1 0-.002 1.206A.603.603 0 0 0 .604 0m.051.898a.051.051 0 0 1-.101 0V.563a.051.051 0 0 1 .101 0zm0-.52a.05.05 0 0 1-.051.051.05.05 0 0 1-.051-.051V.362c0-.028.023-.051.051-.051s.051.023.051.051z"/></svg>
                  </h1>
@@ -312,6 +339,8 @@ const template = `
                     </div>
                 </div>
             </div>
+
+            <div v-if="messages.length === 0" class="info-header">Welcome to Super Chat</div>
             <div class="messages-container" ref="msgs" >
                 <div v-for="(msg, index) in messages" :class="['message', msg.isUser ? 'user' : 'bot']" @click="toggleOptions(index)">
                     <div class="message-content">
@@ -324,15 +353,28 @@ const template = `
                         <div v-if="msg.error" class="error-message">{{ msg.error }}</div>
                         <div class="wrap-options" v-show="showOptionsIndex === index">
                             <div class="message-timestamp">{{ msg.timestamp }}</div>
-                            
+                        <div class="message-id">Message ID: {{ index + 1 }}</div>                            
                         </div>
                     </div>
                 </div>
                 <div v-if="isLoading" class="loading-indicator"></div>
 
             </div>
-            <div class="commands"></div>
-            <div class="input-area">
+           <div class="commands">
+              <div v-if="attachmentPreviews.length > 0 && attachmentPreviews[0].type.startsWith('image')" @click="sendMessage" class="command command-color">
+                <div>*Ask about the attached image using the '<span>/image</span>' command. You can also combine it with '<span class="monotype">/message</span>' to include the last message as context.</div>
+              </div>
+              <div v-if="attachmentPreviews.length > 0 && attachmentPreviews[0].type === 'application/pdf'" @click="sendMessage" class="command command-color">
+                <div>*Ask about the attached PDF using the '<span>/pdf</span>' command.</div>
+              </div>
+              <div v-if="attachmentPreviews.length > 0 && attachmentPreviews[0].type.startsWith('audio')" @click="sendMessage" class="command command-color">
+                <div>*Ask about the attached audio using the '<span>/audio</span>' command.</div>
+              </div>
+              <div v-if="newMessage.trim() && !attachmentPreviews.length" @click="sendMessage" class="command command-color">
+                <div>*Ask about the last message using the '<span>/message</span>' or specific message using '<span>/message-[id] </span> command.</div>
+          </div>
+
+            <div class="input-area" ref="inputArea">
                 <div v-if="attachmentPreviews.length" class="attachment-preview-area">
                     <div v-for="(preview, index) in attachmentPreviews" class="attachment-preview">
                         <img v-if="preview.type.startsWith('image')" :src="preview.url">
@@ -344,18 +386,21 @@ const template = `
                 <div v-if="isRecording" @click="mediaRecorder.stop()" class="recording-indicator"></div>
 
                 <div class="input-row">
-                    <textarea class="message-input" 
-                           :class="{ 'multiline': hasBreakline }"
-                           v-model="newMessage"
-                           @keydown.enter.exact.ctrl="sendMessage"
-                           @keydown.enter.exact="sendMessage" // Added this line
-                           @input="handleInput"
-                           @focus="inputFocused = true"
-                           @blur="handleBlur"
-                           ref="messageInput"
-                           placeholder="Escribe un mensaje..."></textarea>
+                     <div class="message-input"
+     contenteditable="true"
+     :style="{ opacity: showImageText ? 1 : 0 }"
+     @input="handleInput"
+     @input="autoResize"
+     @keydown.enter.exact.ctrl="sendMessage"
+     @keydown.enter.exact="sendMessage"
+     @focus="inputFocused = true"
+     @blur="handleBlur"
+     ref="messageInput"
+     placeholder="Type a message...">
+</div>
+
                     <div class="action-buttons">
-                        <button class="attachment-button" @click="toggleMenu">
+                        <button  v-if="showAttachmentButton"  @click="toggleMenu" class="attachment-button">
 <svg width="20" height="20" viewBox="0 0 0.6 0.6" xmlns="http://www.w3.org/2000/svg"><path d="M.178.526A.17.17 0 0 1 .125.4V.15a.125.125 0 0 1 .25 0V.4a.075.075 0 0 1-.15 0V.2a.025.025 0 0 1 .05 0v.2a.025.025 0 0 0 .05 0V.15a.075.075 0 0 0-.15 0V.4a.125.125 0 0 0 .129.125.13.13 0 0 0 .121-.131V.1a.025.025 0 0 1 .05 0v.294a.18.18 0 0 1-.17.181H.3A.17.17 0 0 1 .178.526"/></svg>
                             <div class="attachment-menu" :class="{ active: showMenu }" @mouseleave="showMenu = false">
                                 <div class="menu-item" @click="handleAttachment">
