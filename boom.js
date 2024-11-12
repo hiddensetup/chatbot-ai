@@ -310,7 +310,9 @@ if (process.argv[2] === "deleteAllFiles") {
 app.get("/lastConversation/:userId", async (req, res) => {
   const userId = req.params.userId;
   const userChatHistory = chatHistory.find(user => user.userId === userId);
-  if (!userChatHistory) return res.status(404).json({ error: "User not found" });
+  if (!userChatHistory) {
+    return res.status(404).json({ error: "No conversation history found for this user ID." });
+  }
   const messages = userChatHistory.conversations[0].messages;
   // Replace Google Cloud Storage URLs with a slug API endpoint
   messages.forEach(message => {

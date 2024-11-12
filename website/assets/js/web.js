@@ -1,12 +1,16 @@
 
 
-var endpoint =
-  "http://localhost:5700";
+let endpoint = "";
 
-//   const endpoint =
-//   fetch("assets/js/endpoint.json")
-//     .then((response) => response.json())
-//     .then((data) => data.endpoint);
+fetch("assets/js/endpoint.json")
+  .then((response) => response.json())
+  .then((data) => {
+    endpoint = atob(data.url);
+  })
+  .catch((error) => {
+    console.error("Error fetching endpoint:", error);
+  });
+
 
 
 const link = document.createElement('link');
@@ -68,7 +72,8 @@ document.head.appendChild(link);
 
   async function fetchLastConversation(userId) {
     try {
-      const response = await fetch(endpoint + '/lastConversation/' + `${userId}`);
+      
+      const response = await fetch( endpoint + '/lastConversation/' + `${userId}`);
       if (!response.ok) {
         throw new Error("Failed to retrieve last conversation");
       }
@@ -331,7 +336,7 @@ document.head.appendChild(link);
           console.error("Error:", error);
           if (endpoint === "") {
             this.messages.push({
-              text: `[Cat](https://placecats.com/neo_2/300/200) 😥 Lo siento, parece que no hay agentes disponibles en este momento.\\\n\\\n Puedes programar una reunión a través de **[este enlace](https://routin.cloud/reunion)** para una mejor experiencia y obtener acceso gratuito. \\\n\\\n ¡Gracias por tu paciencia!`,
+              text: `![assets/js/08e7ec0f84233b37ac26e920bc60ec57-2425886640.gif](assets/js/08e7ec0f84233b37ac26e920bc60ec57-2425886640.gif) 😔 Ups! No hay agentes disponibles.  \\\n\\\n Puedes programar una reunión a través de **[este enlace](https://routin.cloud/reunion)** para una mejor experiencia y obtener acceso gratuito. \\\n\\\n ¡Gracias por tu paciencia!`,
               isUser: false,
               timestamp: new Date().toLocaleTimeString([], {
                 hour: "2-digit",
@@ -341,7 +346,8 @@ document.head.appendChild(link);
           } else {
             console.error("Error sending message:", error);
             this.messages.push({
-              text: `![Cat](https://placecats.com/neo_2/300/200) 😔 Ups! Parece que hay un problema con la conexión.  \\\n\\\n Puedes programar una reunión a través de **[este enlace](https://routin.cloud/reunion)** para una mejor experiencia y obtener acceso gratuito. \\\n\\\n ¡Gracias por tu paciencia!`,
+              text: `![assets/js/228d269a2c536f7c19d5fc5a82f76659-1626091839.gif](assets/js/228d269a2c536f7c19d5fc5a82f76659-1626091839.gif) 😔 Ups! Parece que hay un problema con la conexión.  \\\n\\\n Puedes programar una reunión a través de **[este enlace](https://routin.cloud/reunion)** para una mejor experiencia y obtener acceso gratuito. \\\n\\\n ¡Gracias por tu paciencia!`,
+              image: null,
               isUser: false,
               timestamp: new Date().toLocaleTimeString([], {
                 hour: "2-digit",
