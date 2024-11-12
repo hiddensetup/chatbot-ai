@@ -11,19 +11,19 @@ const { GoogleAIFileManager } = require("@google/generative-ai/server");
 const app = express();
 const PORT = process.env.GOOGLE_AI_PORT || 3000;
 const SCRIPT_NAME = path.basename(__filename);
-const ALLOWED_ORIGINS =
-  process.env.ALLOWED_ORIGINS === "*"
-    ? "*"
-    : process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(",")
-    : ["http://localhost"];
 
-// CORS configuration
+// ----------------------------------------------------------------------------
+//  CORS Configuration
+// ----------------------------------------------------------------------------
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS === "*"
+  ? "*"
+  : process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : ["http://localhost"];
+
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (ALLOWED_ORIGINS === "*") {
-      callback(null, true);
-    } else if (ALLOWED_ORIGINS.includes(origin)) {
+  origin: (origin, callback) => {
+    if (ALLOWED_ORIGINS === "*" || ALLOWED_ORIGINS.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -35,17 +35,12 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: "50mb" }));
 
 // ----------------------------------------------------------------------------
-//  Load system instruction
+//  Load System Instructions
 // ----------------------------------------------------------------------------
 let googleAiSystemInstruction;
 try {
   const contextFilePath = process.env.CONTEXT || path.join(__dirname, "context.json");
-  const defaultContext = { "systemInstruction": "atender amable" };
-  if (!contextFilePath) {
-    throw new Error("CONTEXT file path is not specified in .env");
-  }
-  const contextFileContent = fs.readFileSync(contextFilePath, "utf8");
-  const contextData = JSON.parse(contextFileContent);
+  const contextData = JSON.parse(fs.readFileSync(contextFilePath, "utf8"));
   googleAiSystemInstruction = contextData.systemInstruction;
   console.log("System instruction loaded successfully");
 } catch (error) {
@@ -54,7 +49,7 @@ try {
 }
 
 // ----------------------------------------------------------------------------
-//  Initialize AI components
+//  Initialize AI Components
 // ----------------------------------------------------------------------------
 if (!process.env.API_KEY) {
   console.error("Error: API_KEY is missing in .env file");
@@ -62,30 +57,25 @@ if (!process.env.API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(process.env.API_KEY);
-const modelName = process.env.MODEL;  
-console.log(`Using model: ${modelName}`);
+const fileManager = new GoogleAIFileManager(process.env.API_KEY);
 
+const modelName = process.env.MODEL;
 const multiModal = genAI.getGenerativeModel({
   model: process.env.MODEL,
   systemInstruction: googleAiSystemInstruction,
 });
-
 const model = genAI.getGenerativeModel({
   model: modelName,
   systemInstruction: googleAiSystemInstruction,
 });
 
-const fileManager = new GoogleAIFileManager(process.env.API_KEY);
-
 // ----------------------------------------------------------------------------
-//  Session and history management
+//  Session and History Management
 // ----------------------------------------------------------------------------
 const sessions = new Map();
 const dbFilePath = "db.json";
 
-if (!fs.existsSync(dbFilePath)) {
-  fs.writeFileSync(dbFilePath, "[]");
-}
+if (!fs.existsSync(dbFilePath)) fs.writeFileSync(dbFilePath, "[]");
 
 async function loadChatHistory() {
   return JSON.parse(await fs.promises.readFile(dbFilePath));
@@ -97,372 +87,145 @@ async function saveChatHistory(chatHistory) {
 
 let chatHistory;
 loadChatHistory()
-  .then((data) => {
-    chatHistory = data;
-  })
+  .then((data) => chatHistory = data)
   .catch((err) => {
     console.error("Error loading chat history:", err);
     chatHistory = [];
   });
+
 // ----------------------------------------------------------------------------
-//  Helper function to process image
+//  Helper Functions to Process Media Files
 // ----------------------------------------------------------------------------
+
+// Process and upload an image file
 async function processImage(imageData) {
-  try {
-    const uploadsDir = "uploads";
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir);
-    }
-
-    const filename = `${Date.now()}.png`;
-    const imagePath = path.join(uploadsDir, filename);
-
-    // Remove data URL prefix if present
-    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
-    await fs.promises.writeFile(imagePath, base64Data, "base64");
-
-    const uploadResult = await fileManager.uploadFile(imagePath, {
-      mimeType: "image/png",
-      displayName: filename,
-    });
-
-    // Clean up the temporary file
-    await fs.promises.unlink(imagePath); // This line was already present
-
-    return uploadResult.file.uri;
-  } catch (error) {
-    console.error("Error processing image:", error);
-    throw new Error("Failed to process image");
-  }
+  const filename = `${Date.now()}.png`;
+  const imagePath = path.join("uploads", filename);
+  const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
+  await fs.promises.writeFile(imagePath, base64Data, "base64");
+  const uploadResult = await fileManager.uploadFile(imagePath, { mimeType: "image/png", displayName: filename });
+  await fs.promises.unlink(imagePath);
+  console.log(`File ${uploadResult.file.uri} uploaded successfully`); // Added console.log
+  return uploadResult.file.uri;
 }
 
-// ----------------------------------------------------------------------------
-//  Helper function to process audio
-// ----------------------------------------------------------------------------
+// Process and upload an audio file
 async function processAudio(audioData) {
-  try {
-    const uploadsDir = "uploads";
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir);
-    }
-
-    const filename = `${Date.now()}.mp3`;
-    const audioPath = path.join(uploadsDir, filename);
-
-    // Remove data URL prefix if present
-    const base64Data = audioData.replace(/^data:audio\/\w+;base64,/, "");
-    await fs.promises.writeFile(audioPath, base64Data, "base64");
-
-    const uploadResult = await fileManager.uploadFile(audioPath, {
-      mimeType: "audio/mp3",
-      displayName: filename,
-    });
-
-    // Clean up the temporary file
-    await fs.promises.unlink(audioPath);
-
-    return uploadResult.file.uri;
-  } catch (error) {
-    console.error("Error processing audio:", error);
-    throw new Error("Failed to process audio");
-  }
+  const filename = `${Date.now()}.mp3`;
+  const audioPath = path.join("uploads", filename);
+  const base64Data = audioData.replace(/^data:audio\/\w+;base64,/, "");
+  await fs.promises.writeFile(audioPath, base64Data, "base64");
+  const uploadResult = await fileManager.uploadFile(audioPath, { mimeType: "audio/mp3", displayName: filename });
+  await fs.promises.unlink(audioPath);
+  console.log(`File ${uploadResult.file.uri} uploaded successfully`); // Added console.log
+  return uploadResult.file.uri;
 }
 
-// ----------------------------------------------------------------------------
-//  Helper function to process PDF
-// ----------------------------------------------------------------------------
+// Process and upload a PDF file
 async function processPDF(pdfData) {
-  try {
-    const uploadsDir = "uploads";
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir);
-    }
-
-    const filename = `${Date.now()}.pdf`;
-    const pdfPath = path.join(uploadsDir, filename);
-
-    // Remove data URL prefix if present
-    const base64Data = pdfData.replace(/^data:application\/pdf;base64,/, "");
-    await fs.promises.writeFile(pdfPath, base64Data, "base64");
-
-    const uploadResult = await fileManager.uploadFile(pdfPath, {
-      mimeType: "application/pdf",
-      displayName: filename,
-    });
-
-    // Clean up the temporary file
-    await fs.promises.unlink(pdfPath);
-
-    return uploadResult.file.uri;
-  } catch (error) {
-    console.error("Error processing PDF:", error);
-    throw new Error("Failed to process PDF");
-  }
+  const filename = `${Date.now()}.pdf`;
+  const pdfPath = path.join("uploads", filename);
+  const base64Data = pdfData.replace(/^data:application\/pdf;base64,/, "");
+  await fs.promises.writeFile(pdfPath, base64Data, "base64");
+  const uploadResult = await fileManager.uploadFile(pdfPath, { mimeType: "application/pdf", displayName: filename });
+  await fs.promises.unlink(pdfPath);
+  console.log(`File ${uploadResult.file.uri} uploaded successfully`); // Added console.log
+  return uploadResult.file.uri;
 }
 
 // ----------------------------------------------------------------------------
-//  Enhanced chat endpoint with image analysis
+//  Enhanced Chat Endpoint with Media Analysis
 // ----------------------------------------------------------------------------
-
 app.post("/chat", async (req, res) => {
   const { message, userId, image, audio, pdf, replyTo } = req.body;
 
-  if (!userId) {
-    return res.status(400).json({ error: "User ID is required" });
-  }
+  if (!userId) return res.status(400).json({ error: "User ID is required" });
 
   try {
-    let response;
-    let fileUri = null;
-    let mimeType = null;
-    let modifiedMessage = message;
-    let currentHistory = [];
-    let replyToId = null; // Initialize replyToId
-
-    // Retrieve or initialize user session and chat history
-    if (!sessions.has(userId)) {
-      sessions.set(userId, model.startChat({}));
-    }
+    let response, fileUri = null, mimeType = null, modifiedMessage = message, currentHistory = [], replyToId = null;
+    if (!sessions.has(userId)) sessions.set(userId, model.startChat({}));
     const chat = sessions.get(userId);
 
-    // Retrieve or initialize chat history
-    let userChatHistory = chatHistory.find((user) => user.userId === userId);
+    let userChatHistory = chatHistory.find(user => user.userId === userId);
     if (!userChatHistory) {
-      userChatHistory = {
-        userId,
-        conversations: [
-          {
-            conversationId: `conv_${Date.now()}`,
-            messages: [],
-          },
-        ],
-      };
+      userChatHistory = { userId, conversations: [{ conversationId: `conv_${Date.now()}`, messages: [] }] };
       chatHistory.push(userChatHistory);
     }
     const conversation = userChatHistory.conversations[0];
 
-    // Function to retrieve message by ID or get the last message
-    const getMessageByIdOrLast = (id) => {
-      if (id) {
-        return (
-          conversation.messages.find((msg) => msg.messageId === id) || null
-        );
-      }
-      for (let i = conversation.messages.length - 1; i >= 0; i--) {
-        const msg = conversation.messages[i];
-        if (msg.user_type === "user" || msg.user_type === "assistant") {
-          return msg;
-        }
-      }
-      return null;
-    };
+    const getMessageByIdOrLast = (id) => id ? conversation.messages.find(msg => msg.messageId === id) : conversation.messages.slice().reverse().find(msg => msg.user_type === "user" || msg.user_type === "assistant");
 
-    // Build conversation history for context
     const buildConversationHistory = (replyToId) => {
       const history = [];
       if (replyToId) {
-        const messageIndex = conversation.messages.findIndex(
-          (msg) => msg.messageId === replyToId
-        );
-        if (messageIndex !== -1) {
-          const contextWindow = conversation.messages.slice(
-            Math.max(0, messageIndex - 4),
-            messageIndex + 1
-          );
-          contextWindow.forEach((msg) => {
-            if (msg.hasMedia && msg.fileUri) {
-              history.push({
-                fileData: {
-                  fileUri: msg.fileUri,
-                  mimeType: msg.mimeType,
-                },
-              });
-            }
-            history.push(msg.content);
-          });
-        }
+        const contextWindow = conversation.messages.slice(Math.max(0, conversation.messages.findIndex(msg => msg.messageId === replyToId) - 4));
+        contextWindow.forEach(msg => history.push(msg.hasMedia && msg.fileUri ? { fileData: { fileUri: msg.fileUri, mimeType: msg.mimeType } } : msg.content));
       }
       return history;
     };
 
-    // Handle /message and /message-<id> command
-    const messageCommandMatch = message.match(/\/message(?:-(\d+))?/);
-    if (messageCommandMatch) {
-      const specifiedId = messageCommandMatch[1]
-        ? parseInt(messageCommandMatch[1], 10)
-        : null;
-      const referencedMessage = getMessageByIdOrLast(specifiedId);
-
-      if (referencedMessage) {
-        const quotedContent = `> ${referencedMessage.content}`;
-        modifiedMessage = modifiedMessage.replace(
-          `/message${specifiedId ? `-${specifiedId}` : ""}`,
-          quotedContent
-        );
-
-        if (referencedMessage.hasMedia && referencedMessage.fileUri) {
-          fileUri = referencedMessage.fileUri;
-          mimeType = referencedMessage.mimeType;
+    const handleMessageCommand = () => {
+      const messageCommandMatch = message.match(/\/message(?:-(\d+))?/);
+      if (messageCommandMatch) {
+        const specifiedId = messageCommandMatch[1] ? parseInt(messageCommandMatch[1], 10) : null;
+        const referencedMessage = getMessageByIdOrLast(specifiedId);
+        if (referencedMessage) {
+          const quotedContent = `> ${referencedMessage.content}`;
+          modifiedMessage = modifiedMessage.replace(`/message${specifiedId ? `-${specifiedId}` : ""}`, quotedContent);
+          if (referencedMessage.hasMedia && referencedMessage.fileUri) {
+            fileUri = referencedMessage.fileUri;
+            mimeType = referencedMessage.mimeType;
+          }
+          replyToId = referencedMessage.messageId;
+        } else {
+          return res.status(400).json({ error: `No message found with ID ${specifiedId}.` });
         }
-        replyToId = referencedMessage.messageId;
-      } else {
-        return res.status(400).json({
-          error: `No message found with ID ${specifiedId}.`,
-        });
       }
-    }
+    };
 
-    // Handle /image command
-    if (message.includes("/image")) {
-      const lastImageMessage = conversation.messages
-        .slice()
-        .reverse()
-        .find((msg) => msg.hasMedia && msg.fileUri && msg.mimeType === "image/png");
+    handleMessageCommand();
 
-      if (!lastImageMessage) {
-        return res.status(400).json({
-          error: "No previous image found to reuse.",
-        });
+    const handleMediaCommand = async (type, processFunc, lastMimeType) => {
+      const lastMediaMessage = conversation.messages.slice().reverse().find(msg => msg.hasMedia && msg.fileUri && msg.mimeType === lastMimeType);
+      if (message.includes(`/${type}`)) {
+        if (!lastMediaMessage) return res.status(400).json({ error: `No previous ${type} found to reuse.` });
+        modifiedMessage = message.replace(`/${type}`, `\n> ${lastMediaMessage.content}`);
+        fileUri = lastMediaMessage.fileUri;
+        mimeType = lastMediaMessage.mimeType;
+      } else if (req.body[type]) {
+        fileUri = await processFunc(req.body[type]);
+        mimeType = lastMimeType;
       }
+    };
 
-      modifiedMessage = message.replace(
-        "/image",
-        `\n> ${lastImageMessage.content}`
-      );
-      fileUri = lastImageMessage.fileUri;
-      mimeType = lastImageMessage.mimeType;
-      console.log("Reusing previous image URI:", fileUri);
-    } else if (image) {
-      console.log("Processing new image with message:", message);
-      fileUri = await processImage(image);
-      mimeType = "image/png";
-      console.log("Image processed and uploaded:", fileUri);
-    }
+    await handleMediaCommand("image", processImage, "image/png");
+    await handleMediaCommand("audio", processAudio, "audio/mp3");
+    await handleMediaCommand("pdf", processPDF, "application/pdf");
 
-    // Handle /audio command
-    if (message.includes("/audio")) {
-      const lastAudioMessage = conversation.messages
-        .slice()
-        .reverse()
-        .find((msg) => msg.hasMedia && msg.fileUri && msg.mimeType === "audio/mp3");
-
-      if (!lastAudioMessage) {
-        return res.status(400).json({
-          error: "No previous audio found to reuse.",
-        });
-      }
-
-      modifiedMessage = message.replace(
-        "/audio",
-        `\n> ${lastAudioMessage.content}`
-      );
-      fileUri = lastAudioMessage.fileUri;
-      mimeType = lastAudioMessage.mimeType;
-      console.log("Reusing previous audio URI:", fileUri);
-    } else if (audio) {
-      console.log("Processing new audio with message:", message);
-      fileUri = await processAudio(audio);
-      mimeType = "audio/mp3";
-      console.log("Audio processed and uploaded:", fileUri);
-      // Add a default message if audio is received without text
-      if (!message) {
-        modifiedMessage = "This is an audio message. Please respond to it as if it were a text message. I will try to understand the audio and respond accordingly.";
-      }
-    }
-
-    // Handle /pdf command
-    if (message.includes("/pdf")) {
-      const lastPdfMessage = conversation.messages
-        .slice()
-        .reverse()
-        .find((msg) => msg.hasMedia && msg.fileUri && msg.mimeType === "application/pdf");
-
-      if (!lastPdfMessage) {
-        return res.status(400).json({
-          error: "No previous PDF found to reuse.",
-        });
-      }
-
-      modifiedMessage = message.replace(
-        "/pdf",
-        `\n> ${lastPdfMessage.content}`
-      );
-      fileUri = lastPdfMessage.fileUri;
-      mimeType = lastPdfMessage.mimeType;
-      console.log("Reusing previous PDF URI:", fileUri);
-    } else if (pdf) {
-      console.log("Processing new PDF with message:", message);
-      fileUri = await processPDF(pdf);
-      mimeType = "application/pdf";
-      console.log("PDF processed and uploaded:", fileUri);
-    }
-
-    // Build conversation history
     currentHistory = buildConversationHistory(replyTo || replyToId);
+    if (modifiedMessage) currentHistory.push(modifiedMessage);
+    if (fileUri) currentHistory.push({ fileData: { fileUri, mimeType } });
 
-    // Add current message and image to history
-    if (modifiedMessage) {
-      currentHistory.push(modifiedMessage);
-    }
-
-    if (fileUri) {
-      currentHistory.push({
-        fileData: {
-          fileUri: fileUri,
-          mimeType: mimeType,
-        },
-      });
-    }
-
-    // Generate response using the appropriate model
-    const result = currentHistory.some((item) => item.fileData)
+    const result = currentHistory.some(item => item.fileData)
       ? await multiModal.generateContent(currentHistory)
       : await chat.sendMessage(currentHistory.join("\n"));
 
     response = await result.response.text();
-
-    // Generate new message IDs
-    const nextMessageId =
-      conversation.messages.length > 0
-        ? conversation.messages[conversation.messages.length - 1].messageId + 1
-        : 1;
-
-    // Store current user message and assistant's response
-    conversation.messages.push({
-      messageId: nextMessageId,
-      user_type: "user",
-      content: modifiedMessage,
-      hasMedia: !!fileUri,
-      fileUri: fileUri || null,
-      mimeType: mimeType || null,
-      timestamp: new Date().toISOString(),
-      replyTo: replyTo || replyToId || null, // Use replyTo if available, otherwise replyToId
-    });
+    const nextMessageId = conversation.messages.length > 0 ? conversation.messages[conversation.messages.length - 1].messageId + 1 : 1;
 
     conversation.messages.push({
-      messageId: nextMessageId + 1,
-      user_type: "assistant",
-      content: response,
-      timestamp: new Date().toISOString(),
+      messageId: nextMessageId, user_type: "user", content: modifiedMessage, hasMedia: !!fileUri,
+      fileUri, mimeType, timestamp: new Date().toISOString(), replyTo: replyTo || replyToId
     });
+    conversation.messages.push({ messageId: nextMessageId + 1, user_type: "assistant", content: response, timestamp: new Date().toISOString() });
 
     await saveChatHistory(chatHistory);
-
-    res.json({
-      text: response,
-      hasMedia: !!fileUri,
-      analyzed: !!fileUri,
-      messageId: nextMessageId + 1,
-    });
+    res.json({ text: response, hasMedia: !!fileUri, analyzed: !!fileUri, messageId: nextMessageId + 1 });
   } catch (error) {
     console.error("Error in chat endpoint:", error);
-    res.status(500).json({
-      error: "Internal Server Error",
-      details: error.message,
-    });
+    res.status(500).json({ error: "Internal Server Error", details: error.message });
   }
 });
-
 // ----------------------------------------------------------------------------
 //  File Management API Endpoints
 // ----------------------------------------------------------------------------
@@ -477,51 +240,89 @@ app.get("/listFiles", async (req, res) => {
   }
 });
 
-
-// ----------------------------------------------------------------------------
-//  API endpoint to retrieve the last conversation
-// ----------------------------------------------------------------------------
-app.get("/lastConversation/:userId", async (req, res) => {
-  // This API endpoint retrieves the last conversation for a given user.
-  // Example usage: GET /lastConversation/12345
-  const userId = req.params.userId;
+// Delete a file by its name.
+// Example usage: DELETE /deleteFile/my_file.pdf
+app.delete("/deleteFile/:fileName", async (req, res) => {
+  const fileName = req.params.fileName;
   try {
-    const userChatHistory = chatHistory.find((user) => user.userId === userId);
-    if (!userChatHistory) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    const conversation = userChatHistory.conversations[0];
-    res.json(conversation.messages);
+    await fileManager.deleteFile(fileName);
+    res.json({ message: `File ${fileName} deleted successfully` });
   } catch (error) {
-    console.error("Error retrieving last conversation:", error);
-    res.status(500).json({ error: "Failed to retrieve last conversation" });
+    console.error("Error deleting file:", error);
+    if (error.message.includes("File not found")) {
+      res.status(404).json({ error: "File not found" });
+    } else {
+      res.status(500).json({ error: "Failed to delete file" });
+    }
+  }
+});
+
+// Endpoint to delete all files
+// Example usage: DELETE /deleteAll
+app.delete("/deleteAll", async (req, res) => {
+  try {
+    const listFilesResponse = await fileManager.listFiles();
+    for (const file of listFilesResponse.files) {
+      await fileManager.deleteFile(file.name);
+      console.log(`File ${file.displayName} deleted successfully`);
+    }
+    res.json({ message: "All files deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting files:", error);
+    res.status(500).json({ error: "Failed to delete files" });
   }
 });
 
 // ----------------------------------------------------------------------------
-//  Start server
+//  Helper function to delete a file from the terminal
+// ----------------------------------------------------------------------------
+async function deleteAllFiles() {
+  try {
+    const listFilesResponse = await fileManager.listFiles();
+    for (const file of listFilesResponse.files) {
+      await fileManager.deleteFile(file.name);
+      console.log(`File ${file.displayName} deleted successfully`);
+    }
+    console.log("All files deleted successfully");
+  } catch (error) {
+    console.error("Error deleting files:", error);
+  }
+}
+
+// Example usage from the terminal:
+// node boom.js deleteAllFiles
+// node boom.js deleteFile "my_file.pdf"
+if (process.argv[2] === "deleteAllFiles") {
+  deleteAllFiles();
+} else if (process.argv[2] === "deleteFile" && process.argv[3]) {
+  const fileName = process.argv[3];
+  fileManager
+    .deleteFile(fileName)
+    .then(() => console.log(`File ${fileName} deleted successfully`))
+    .catch((error) => console.error(`Error deleting file ${fileName}:`, error));
+}
+
+
+
+// ----------------------------------------------------------------------------
+//  Retrieve Last Conversation
+// ----------------------------------------------------------------------------
+app.get("/lastConversation/:userId", async (req, res) => {
+  const userId = req.params.userId;
+  const userChatHistory = chatHistory.find(user => user.userId === userId);
+  if (!userChatHistory) return res.status(404).json({ error: "User not found" });
+  res.json(userChatHistory.conversations[0].messages);
+});
+
+// ----------------------------------------------------------------------------
+//  Start Server
 // ----------------------------------------------------------------------------
 const server = http.createServer(app);
 
-server
-  .listen(PORT, () => {
-    const networkInterfaces = os.networkInterfaces();
-    let ipAddress = "localhost";
-
-    for (const interfaceName in networkInterfaces) {
-      const networkInterface = networkInterfaces[interfaceName];
-      for (const network of networkInterface) {
-        if (network.family === "IPv4" && !network.internal) {
-          ipAddress = network.address;
-          break;
-        }
-      }
-      if (ipAddress !== "localhost") break;
-    }
-
-    console.log(`Server running at http://${ipAddress}:${PORT}`);
-  })
-  .on("error", (err) => {
-    console.error(`Failed to start server on port ${PORT}:`, err);
-    process.exit(1);
-  });
+server.listen(PORT, () => {
+  const ipAddress = Object.values(os.networkInterfaces()).flat().find(net => net.family === "IPv4" && !net.internal)?.address || "localhost";
+  console.log(`Server running at http://${ipAddress}:${PORT}`);
+}).on("error", (err) => {
+  console.error(`Failed to start server on port ${PORT}:`, err);
+  process.exit(1);
+});
