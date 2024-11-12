@@ -50,5 +50,83 @@
         ]
       }
     ]
+  },
+  {
+    "userId": "user_1q4b04ck3",
+    "conversations": [
+      {
+        "conversationId": "conv_1731368533461",
+        "messages": [
+          {
+            "messageId": 1,
+            "user_type": "user",
+            "content": "hola",
+            "hasMedia": false,
+            "fileUri": null,
+            "mimeType": null,
+            "timestamp": "2024-11-11T23:42:15.120Z",
+            "replyTo": null
+          },
+          {
+            "messageId": 2,
+            "user_type": "assistant",
+            "content": "¡Hola! Me llamo Sofía, un gusto conocerte 😊 ¿Qué te trae por aquí hoy? \n",
+            "timestamp": "2024-11-11T23:42:15.120Z"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "userId": "user_cusmqkv1j",
+    "conversations": [
+      {
+        "conversationId": "conv_1731369120263",
+        "messages": [
+          {
+            "messageId": 1,
+            "user_type": "user",
+            "content": "hola",
+            "hasMedia": false,
+            "fileUri": null,
+            "mimeType": null,
+            "timestamp": "2024-11-11T23:52:01.702Z",
+            "replyTo": null
+          },
+          {
+            "messageId": 2,
+            "user_type": "assistant",
+            "content": "¡Hola! 😄 Me llamo Sofía, un gusto conocerte. ¿Qué te trae por aquí hoy? 😊 \n",
+            "timestamp": "2024-11-11T23:52:01.702Z"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "userId": "user_gzn4nuq85",
+    "conversations": [
+      {
+        "conversationId": "conv_1731369325722",
+        "messages": [
+          {
+            "messageId": 1,
+            "user_type": "user",
+            "content": "hola",
+            "hasMedia": false,
+            "fileUri": null,
+            "mimeType": null,
+            "timestamp": "2024-11-11T23:55:27.108Z",
+            "replyTo": null
+          },
+          {
+            "messageId": 2,
+            "user_type": "assistant",
+            "content": "¡Hola! Me llamo Sofía, un gusto conocerte 😊 ¿Qué te trae por aquí hoy? \n",
+            "timestamp": "2024-11-11T23:55:27.108Z"
+          }
+        ]
+      }
+    ]
   }
 ]
