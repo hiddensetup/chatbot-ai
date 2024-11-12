@@ -311,7 +311,14 @@ app.get("/lastConversation/:userId", async (req, res) => {
   const userId = req.params.userId;
   const userChatHistory = chatHistory.find(user => user.userId === userId);
   if (!userChatHistory) return res.status(404).json({ error: "User not found" });
-  res.json(userChatHistory.conversations[0].messages);
+  const messages = userChatHistory.conversations[0].messages;
+  // Replace Google Cloud Storage URLs with a slug API endpoint
+  messages.forEach(message => {
+    if (message.fileUri) {
+      message.fileUri = `/file/${message.fileUri}`; // Replace with your slug API endpoint
+    }
+  });
+  res.json(messages);
 });
 
 // ----------------------------------------------------------------------------
