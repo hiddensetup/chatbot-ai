@@ -9,10 +9,10 @@
     --chat-border-color: #e5e5e5;
     --text-app-color: rgb(24, 23, 23);
     --shadow-color: rgba(0, 0, 0, .1);
-    --shadow-chat-window: 0 2px 3px 0 rgb(0 0 0 / 21%)
+    --shadow-div-chat-container: 0 2px 3px 0 rgb(0 0 0 / 21%)
 }
 
-.div-chat-container {
+.div-chat-box {
     position: fixed;
     bottom: 8px;
     right: 18px;
@@ -20,7 +20,7 @@
     font-family: -apple-system, BlinkMacSystemFont, sans-serif
 }
 
-.chat-trigger {
+.button-chat-trigger {
     width: 60px;
     height: 60px;
     border-radius: 40px;
@@ -33,12 +33,12 @@
     transform-origin: 50% 50%
 }
 
-.chat-trigger:active {
+.button-chat-trigger:active {
     transform: scale(0.98);
     box-shadow: 0 1px 5px var(--shadow-color)
 }
 
-.chat-window {
+.div-chat-container {
     position: absolute;
     bottom: 70px;
     right: 0;
@@ -46,7 +46,7 @@
     min-height: 280px;
     background: var(--chat-primary-background-color);
     border-radius: 15px;
-    box-shadow: var(--shadow-chat-window);
+    box-shadow: var(--shadow-div-chat-container);
     display: flex;
     flex-direction: column;
     max-width: 800px
@@ -80,7 +80,7 @@
     fill: var(--chat-brand-button-color)
 }
 
-.info-header {
+.div-info-header {
     background: var(--chat-info-color);
     text-align: center;
     padding: 3px;
@@ -106,7 +106,7 @@
     cursor: pointer;
 }
 
-.messages-container {
+.div-messages-container {
     flex: 1;
     overflow-y: auto;
     padding: 16px;
@@ -403,7 +403,7 @@
     opacity: 0.5
 }
 
-.attachment-menu {
+.div-attachment-menu {
     position: absolute;
     bottom: 100%;
     left: -140px;
@@ -420,13 +420,13 @@
     margin-bottom: 8px
 }
 
-.attachment-menu.active {
+.div-attachment-menu.active {
     transform: scale(1);
     opacity: 1;
     pointer-events: auto
 }
 
-.menu-item {
+.div-menu-item {
     padding: 10px 16px;
     display: flex;
     align-items: center;
@@ -436,11 +436,11 @@
     font-size: 14px
 }
 
-.menu-item:hover {
+.div-menu-item:hover {
     background: var(--chat-secondary-background-color)
 }
 
-.menu-item svg {
+.div-menu-item svg {
     width: 20px;
     height: 20px
 }
@@ -515,7 +515,7 @@
 }
 
 @media (max-width:900px) {
-    .chat-window {
+    .div-chat-container {
         position: fixed;
         width: 100%;
         height: 100%;
@@ -523,16 +523,16 @@
         border-radius: 0
     }
 
-    .messages-container {
+    .div-messages-container {
         max-height: 100%
     }
 
-    .div-chat-container {
+    .div-chat-box {
         bottom: 5px;
         right: 10px
     }
 
-    .chat-trigger {
+    .button-chat-trigger {
         width: 60px;
         height: 60px;
         border-radius: 50px
@@ -550,7 +550,7 @@
     }
 
     @media (max-height:570px) {
-        .chat-window {
+        .div-chat-container {
             top: 0
         }
     }
